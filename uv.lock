@@ -746,7 +746,7 @@ requires-dist = [
     { name = "numpy", specifier = "==2.5.4" },
     { name = "pandas", specifier = "==3.1.0" },
     { name = "pyarrow", specifier = "==24.0.0" },
-    { name = "requests", specifier = ">=2.34.2" },
+    { name = "requests", specifier = "==2.34.2" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 
