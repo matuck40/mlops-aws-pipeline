@@ -44,7 +44,7 @@ uv sync                                    # create the environment with locked 
 uv run python -m volt.etl 2026-11-18       # ETL for one day (repeat for the 7 days before the target)
 uv run python -m volt.backfill 2023-11-26 2026-11-25  # load a date range, each year downloaded once; exits 1 if any day failed
 uv run python -m volt.previsao 2026-11-25  # forecast a day (needs the load from 7 days earlier)
-uv run uvicorn volt.api:app                # serve the API on http://localhost:8000
+uv run uvicorn volt.api:criar_app_padrao --factory   # serve the API on http://localhost:8000
 curl "localhost:8000/previsao?data=2026-11-25"
 ```
 
@@ -54,7 +54,7 @@ Tests: `uv run pytest`. They never touch the network: the download function is i
 
 ## Deploy to AWS
 
-**Not run yet.** The commands below are the plan; slice 2 has only the S3 bucket in `template.yaml` so far. Region: `us-east-2`.
+**Not run yet.** The commands below are the plan; `template.yaml` currently describes the S3 data bucket, the `volt-diario` Lambda with its daily schedule, and the `volt-api` Lambda behind an HTTP API. Region: `us-east-2`.
 
 ```bash
 aws login                # authenticate first (no credentials are stored in the repo)
@@ -89,6 +89,11 @@ uv export --no-dev --no-hashes --no-emit-project --frozen --no-header \
   --no-emit-package six --no-emit-package urllib3 --no-emit-package certifi \
   --no-emit-package charset-normalizer -o src/requirements.txt
 ```
+
+### Known gaps
+
+- The daily job only loads yesterday: there is no catch-up for missed days yet (to be addressed after observing the ONS publication lag).
+- There is no failure alarm yet (slice 4).
 
 ## Tear down
 
