@@ -17,7 +17,45 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
 
+  GrupoLogsDiaria:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/volt-diario
+      RetentionInDays: 14
+
+  FuncaoDiaria:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: volt-diario
+      CodeUri: src/
+      Handler: volt.lambda_diario.handler
+      Runtime: python3.12
+      Architectures: [x86_64]
+      MemorySize: 512
+      Timeout: 300
+      Layers:
+        - arn:aws:lambda:us-east-2:336392948345:layer:AWSSDKPandas-Python312:32
+      LoggingConfig:
+        LogGroup: !Ref GrupoLogsDiaria
+      Environment:
+        Variables:
+          VOLT_DADOS: !Sub s3://${BucketDados}
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref BucketDados
+      Events:
+        Agendamento:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 10 * * ? *)
+            ScheduleExpressionTimezone: America/Sao_Paulo
+            RetryPolicy:
+              MaximumRetryAttempts: 2
+
 Outputs:
   BucketDados:
     Description: Name of the S3 bucket that holds the pipeline data
     Value: !Ref BucketDados
+  FuncaoDiaria:
+    Description: Name of the daily Lambda (ETL of yesterday + forecast of tomorrow)
+    Value: !Ref FuncaoDiaria

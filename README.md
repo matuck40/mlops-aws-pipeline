@@ -64,6 +64,19 @@ sam deploy               # settings come from samconfig.toml; confirms the chang
 aws s3 ls                # the bucket volt-dados-<account-id> should appear
 ```
 
+### Lambda dependencies
+
+`src/requirements.txt` lists only what the AWS SDK for pandas layer does not already ship (pandas, pyarrow, numpy, requests, boto3 and their direct dependencies are left out). Regenerate it after changing dependencies; `tests/test_requirements.py` fails if it drifts:
+
+```bash
+uv export --no-dev --no-hashes --no-emit-project --frozen --no-header \
+  --no-emit-package pandas --no-emit-package pyarrow --no-emit-package numpy \
+  --no-emit-package requests --no-emit-package boto3 --no-emit-package botocore \
+  --no-emit-package s3transfer --no-emit-package jmespath --no-emit-package python-dateutil \
+  --no-emit-package six --no-emit-package urllib3 --no-emit-package certifi \
+  --no-emit-package charset-normalizer -o src/requirements.txt
+```
+
 ## Tear down
 
 **Not run yet.** Order matters: CloudFormation cannot delete a bucket that still has objects.
