@@ -56,14 +56,22 @@ def baixar_ano(ano: int) -> str:
     return resposta.text
 
 
+def buscar_ano(ano: int, fetch: Callable[[int], str]) -> str:
+    """Baixa o ano; um 404 (ano ainda não publicado) vira DiaInvalidoError."""
+    try:
+        return fetch(ano)
+    except requests.HTTPError as erro:
+        if erro.response is not None and erro.response.status_code == 404:
+            raise DiaInvalidoError(f"ano {ano} ainda não publicado pelo ONS") from erro
+        raise
+
+
 def rodar_etl(dia: date, dados: Armazenamento, fetch: Callable[[int], str] = baixar_ano) -> str:
     """Busca, valida e grava um dia. Rodar de novo sobrescreve (idempotente)."""
     try:
-        texto = fetch(dia.year)
-    except requests.HTTPError as erro:
-        if erro.response is not None and erro.response.status_code == 404:
-            raise DiaInvalidoError(f"{dia}: ano {dia.year} ainda não publicado pelo ONS") from erro
-        raise
+        texto = buscar_ano(dia.year, fetch)
+    except DiaInvalidoError as erro:
+        raise DiaInvalidoError(f"{dia}: {erro}") from erro.__cause__
     do_dia = validar_dia(ler_csv_ons(texto), dia)
 
     return dados.gravar_parquet(do_dia, chave_carga(dia))
