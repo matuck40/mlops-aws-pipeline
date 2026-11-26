@@ -1,0 +1,7 @@
+# dados gerados pelo pipeline (nunca vão para o Git)
+data/
+
+# ambiente e caches do Python
+.venv/
+__pycache__/
+.pytest_cache/
