@@ -1171,6 +1171,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "requests" },
+    { name = "tzdata" },
 ]
 
 [package.dev-dependencies]
@@ -1189,6 +1190,7 @@ requires-dist = [
     { name = "pandas", specifier = "==3.1.0" },
     { name = "pyarrow", specifier = "==24.0.0" },
     { name = "requests", specifier = "==2.34.2" },
+    { name = "tzdata", specifier = "==2026.6" },
 ]
 
 [package.metadata.requires-dev]
