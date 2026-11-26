@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Volt - daily load ETL, forecast and API on AWS (slice 2)
+
+Resources:
+  BucketDados:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub volt-dados-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+Outputs:
+  BucketDados:
+    Description: Name of the S3 bucket that holds the pipeline data
+    Value: !Ref BucketDados
