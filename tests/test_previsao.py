@@ -4,24 +4,26 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from volt.etl import caminho_carga, rodar_etl
-from volt.previsao import caminho_previsao, naive_sazonal, rodar_previsao
+from volt.armazenamento import ArmazenamentoLocal, chave_carga, chave_previsao
+from volt.etl import rodar_etl
+from volt.previsao import main, naive_sazonal, rodar_previsao
 
 FIXTURE = Path(__file__).parent / "fixtures" / "ons_amostra.csv"
 
 
 @pytest.fixture
 def base(tmp_path):
-    """Pasta de dados com o histórico da fixture: 17 a 24/11/2026."""
+    """Armazenamento com o histórico da fixture: 17 a 24/11/2026."""
+    dados = ArmazenamentoLocal(tmp_path)
     texto = FIXTURE.read_text()
     for i in range(8):
-        rodar_etl(date(2026, 11, 17) + timedelta(days=i), tmp_path, fetch=lambda ano: texto)
-    return tmp_path
+        rodar_etl(date(2026, 11, 17) + timedelta(days=i), dados, fetch=lambda ano: texto)
+    return dados
 
 
 def test_naive_copia_semana_anterior(base):
     previsao = naive_sazonal(base, date(2026, 11, 25))
-    referencia = pd.read_parquet(caminho_carga(base, date(2026, 11, 18)), partitioning=None)
+    referencia = base.ler_parquet(chave_carga(date(2026, 11, 18)))
     assert previsao["previsto_mw"].tolist() == referencia["carga_mw"].tolist()
     assert (previsao["versao_modelo"] == "naive_sazonal").all()
 
@@ -40,8 +42,14 @@ def test_naive_sem_referencia(base):
 
 def test_rodar_previsao_idempotente(base):
     rodar_previsao(date(2026, 11, 25), base)
-    caminho = rodar_previsao(date(2026, 11, 25), base)
-    assert caminho == caminho_previsao(base, date(2026, 11, 25))
-    gravado = pd.read_parquet(caminho, partitioning=None)
+    destino = rodar_previsao(date(2026, 11, 25), base)
+    assert destino == str(base.base / chave_previsao(date(2026, 11, 25)))
+    gravado = base.ler_parquet(chave_previsao(date(2026, 11, 25)))
     assert list(gravado.columns) == ["timestamp", "previsto_mw", "versao_modelo"]
     assert len(gravado) == 24
+
+
+def test_cli_usa_volt_dados(base, monkeypatch):
+    monkeypatch.setenv("VOLT_DADOS", str(base.base))
+    main(["2026-11-25"])
+    assert base.existe(chave_previsao(date(2026, 11, 25)))

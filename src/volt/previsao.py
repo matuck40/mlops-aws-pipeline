@@ -2,26 +2,23 @@
 
 import argparse
 from datetime import date, timedelta
-from pathlib import Path
 
 import pandas as pd
 
-from volt.arquivos import gravar_parquet_atomico
-from volt.etl import caminho_carga
+from volt.armazenamento import Armazenamento, abrir_armazenamento, chave_carga, chave_previsao
 
 SEMANA = timedelta(days=7)
 
 
-def naive_sazonal(base: Path, data_alvo: date) -> pd.DataFrame:
+def naive_sazonal(dados: Armazenamento, data_alvo: date) -> pd.DataFrame:
     """Prevê cada hora do alvo como a carga da mesma hora 7 dias antes."""
     referencia = data_alvo - SEMANA
-    caminho = caminho_carga(base, referencia)
-    if not caminho.exists():
+    chave = chave_carga(referencia)
+    if not dados.existe(chave):
         raise FileNotFoundError(
             f"previsão de {data_alvo}: falta a carga de {referencia} (rode o ETL desse dia)"
         )
-    # partitioning=None: sem isso, o pyarrow 24 cria uma coluna "data" a partir da pasta data=...
-    carga = pd.read_parquet(caminho, partitioning=None)
+    carga = dados.ler_parquet(chave)
     return pd.DataFrame(
         {
             "timestamp": carga["timestamp"] + SEMANA,
@@ -31,21 +28,16 @@ def naive_sazonal(base: Path, data_alvo: date) -> pd.DataFrame:
     )
 
 
-def caminho_previsao(base: Path, data_alvo: date) -> Path:
-    return base / "previsoes" / f"data_alvo={data_alvo}" / "previsao.parquet"
-
-
-def rodar_previsao(data_alvo: date, base: Path) -> Path:
+def rodar_previsao(data_alvo: date, dados: Armazenamento) -> str:
     """Gera e grava a previsão do dia alvo. Rodar de novo sobrescreve."""
-    return gravar_parquet_atomico(naive_sazonal(base, data_alvo), caminho_previsao(base, data_alvo))
+    return dados.gravar_parquet(naive_sazonal(dados, data_alvo), chave_previsao(data_alvo))
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Previsão das 24 horas de um dia (naive sazonal)")
     parser.add_argument("data_alvo", type=date.fromisoformat, help="dia a prever, AAAA-MM-DD")
-    parser.add_argument("--base", type=Path, default=Path("data"), help="pasta de dados")
     args = parser.parse_args(argv)
-    print(rodar_previsao(args.data_alvo, args.base))
+    print(rodar_previsao(args.data_alvo, abrir_armazenamento()))
 
 
 if __name__ == "__main__":

@@ -4,12 +4,11 @@ import argparse
 import io
 from collections.abc import Callable
 from datetime import date
-from pathlib import Path
 
 import pandas as pd
 import requests
 
-from volt.arquivos import gravar_parquet_atomico
+from volt.armazenamento import Armazenamento, abrir_armazenamento, chave_carga
 
 URL_ONS = "https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/curva-carga-ho/CURVA_CARGA_{ano}.csv"
 
@@ -57,11 +56,7 @@ def baixar_ano(ano: int) -> str:
     return resposta.text
 
 
-def caminho_carga(base: Path, dia: date) -> Path:
-    return base / "carga_horaria" / f"data={dia}" / "carga.parquet"
-
-
-def rodar_etl(dia: date, base: Path, fetch: Callable[[int], str] = baixar_ano) -> Path:
+def rodar_etl(dia: date, dados: Armazenamento, fetch: Callable[[int], str] = baixar_ano) -> str:
     """Busca, valida e grava um dia. Rodar de novo sobrescreve (idempotente)."""
     try:
         texto = fetch(dia.year)
@@ -71,15 +66,14 @@ def rodar_etl(dia: date, base: Path, fetch: Callable[[int], str] = baixar_ano) -
         raise
     do_dia = validar_dia(ler_csv_ons(texto), dia)
 
-    return gravar_parquet_atomico(do_dia, caminho_carga(base, dia))
+    return dados.gravar_parquet(do_dia, chave_carga(dia))
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="ETL de um dia da carga horária do ONS (SE/CO)")
     parser.add_argument("dia", type=date.fromisoformat, help="dia no formato AAAA-MM-DD")
-    parser.add_argument("--base", type=Path, default=Path("data"), help="pasta de dados")
     args = parser.parse_args(argv)
-    print(rodar_etl(args.dia, args.base))
+    print(rodar_etl(args.dia, abrir_armazenamento()))
 
 
 if __name__ == "__main__":

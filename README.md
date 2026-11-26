@@ -47,6 +47,8 @@ uv run uvicorn volt.api:app                # serve the API on http://localhost:8
 curl "localhost:8000/previsao?data=2026-11-25"
 ```
 
+Data goes to the `data/` folder by default; set `VOLT_DADOS` to use another folder.
+
 Tests: `uv run pytest`. They never touch the network: the download function is injected and replaced by a real ONS excerpt in `tests/fixtures/`.
 
 ## Workflow
