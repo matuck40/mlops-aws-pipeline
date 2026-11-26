@@ -62,13 +62,22 @@ def caminho_carga(base: Path, dia: date) -> Path:
 
 def rodar_etl(dia: date, base: Path, fetch: Callable[[int], str] = baixar_ano) -> Path:
     """Busca, valida e grava um dia. Rodar de novo sobrescreve (idempotente)."""
-    do_dia = validar_dia(ler_csv_ons(fetch(dia.year)), dia)
+    try:
+        texto = fetch(dia.year)
+    except requests.HTTPError as erro:
+        if erro.response is not None and erro.response.status_code == 404:
+            raise DiaInvalidoError(f"{dia}: ano {dia.year} ainda não publicado pelo ONS") from erro
+        raise
+    do_dia = validar_dia(ler_csv_ons(texto), dia)
 
     caminho = caminho_carga(base, dia)
     caminho.parent.mkdir(parents=True, exist_ok=True)
     temporario = caminho.with_suffix(".tmp")
-    do_dia.to_parquet(temporario, index=False)
-    os.replace(temporario, caminho)  # escrita atômica: nunca fica arquivo pela metade
+    try:
+        do_dia.to_parquet(temporario, index=False)
+        os.replace(temporario, caminho)  # escrita atômica: nunca fica arquivo pela metade
+    finally:
+        temporario.unlink(missing_ok=True)  # se falhou no meio, não deixa lixo
     return caminho
 
 

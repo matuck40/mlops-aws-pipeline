@@ -114,3 +114,28 @@ def test_rodar_etl_usa_ano_do_dia(tmp_path):
     with pytest.raises(DiaInvalidoError):  # a fixture não tem 31/12/2025
         rodar_etl(date(2025, 12, 31), tmp_path, fetch=fetch_espiao)
     assert anos_pedidos == [2025]
+
+
+def test_rodar_etl_ano_ainda_nao_publicado(tmp_path):
+    import requests
+
+    def fetch_404(ano: int) -> str:
+        resposta = requests.Response()
+        resposta.status_code = 404
+        raise requests.HTTPError(response=resposta)
+
+    with pytest.raises(DiaInvalidoError, match="ainda não publicado"):
+        rodar_etl(date(2027, 1, 1), tmp_path, fetch=fetch_404)
+    assert not (tmp_path / "carga_horaria").exists()
+
+
+def test_rodar_etl_falha_na_gravacao_nao_deixa_lixo(tmp_path, monkeypatch):
+    def grava_pela_metade(self, caminho, **kwargs):
+        Path(caminho).write_text("meio arquivo")
+        raise OSError("disco cheio")
+
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", grava_pela_metade)
+    with pytest.raises(OSError):
+        rodar_etl(date(2026, 11, 24), tmp_path, fetch=fetch_falso)
+    pasta = caminho_carga(tmp_path, date(2026, 11, 24)).parent
+    assert list(pasta.iterdir()) == []
