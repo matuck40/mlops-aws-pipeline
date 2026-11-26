@@ -87,7 +87,7 @@ def test_caminho_carga(tmp_path):
 def test_rodar_etl_grava_24_linhas(tmp_path):
     caminho = rodar_etl(date(2026, 11, 24), tmp_path, fetch=fetch_falso)
     assert caminho == caminho_carga(tmp_path, date(2026, 11, 24))
-    gravado = pd.read_parquet(caminho)
+    gravado = pd.read_parquet(caminho, partitioning=None)
     assert list(gravado.columns) == ["timestamp", "carga_mw"]
     assert len(gravado) == 24
 
@@ -95,7 +95,7 @@ def test_rodar_etl_grava_24_linhas(tmp_path):
 def test_rodar_etl_idempotente(tmp_path):
     rodar_etl(date(2026, 11, 24), tmp_path, fetch=fetch_falso)
     caminho = rodar_etl(date(2026, 11, 24), tmp_path, fetch=fetch_falso)
-    assert len(pd.read_parquet(caminho)) == 24
+    assert len(pd.read_parquet(caminho, partitioning=None)) == 24
 
 
 def test_rodar_etl_dia_nao_publicado_nao_grava(tmp_path):

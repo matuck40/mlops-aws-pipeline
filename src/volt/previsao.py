@@ -20,7 +20,8 @@ def naive_sazonal(base: Path, data_alvo: date) -> pd.DataFrame:
         raise FileNotFoundError(
             f"previsão de {data_alvo}: falta a carga de {referencia} (rode o ETL desse dia)"
         )
-    carga = pd.read_parquet(caminho)
+    # partitioning=None: sem isso, o pyarrow 24 cria uma coluna "data" a partir da pasta data=...
+    carga = pd.read_parquet(caminho, partitioning=None)
     return pd.DataFrame(
         {
             "timestamp": carga["timestamp"] + SEMANA,
