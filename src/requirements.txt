@@ -12,6 +12,8 @@ idna==3.20
     # via
     #   anyio
     #   requests
+mangum==0.22.0
+    # via volt
 opentelemetry-api==1.45.2
     # via fastapi
 pydantic==2.14.4
@@ -24,6 +26,7 @@ typing-extensions==4.16.0
     # via
     #   anyio
     #   fastapi
+    #   mangum
     #   opentelemetry-api
     #   pydantic
     #   pydantic-core
