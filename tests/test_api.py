@@ -1,0 +1,63 @@
+from datetime import date, timedelta
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from volt.api import criar_app
+from volt.etl import rodar_etl
+from volt.previsao import rodar_previsao
+
+FIXTURE = Path(__file__).parent / "fixtures" / "ons_amostra.csv"
+
+
+@pytest.fixture
+def base(tmp_path):
+    """Histórico de 17 a 24/11 e a previsão de 25/11 já gravada."""
+    texto = FIXTURE.read_text()
+    for i in range(8):
+        rodar_etl(date(2026, 11, 17) + timedelta(days=i), tmp_path, fetch=lambda ano: texto)
+    rodar_previsao(date(2026, 11, 25), tmp_path)
+    return tmp_path
+
+
+@pytest.fixture
+def cliente(base):
+    return TestClient(criar_app(base, hoje=lambda: date(2026, 11, 24)))
+
+
+def test_health(cliente):
+    resposta = cliente.get("/health")
+    assert resposta.status_code == 200
+    assert resposta.json() == {"status": "ok"}
+
+
+def test_previsao_200_com_24_itens(cliente):
+    resposta = cliente.get("/previsao", params={"data": "2026-11-25"})
+    assert resposta.status_code == 200
+    corpo = resposta.json()
+    assert corpo["data"] == "2026-11-25"
+    assert corpo["versao_modelo"] == "naive_sazonal"
+    assert len(corpo["previsoes"]) == 24
+    assert corpo["previsoes"][0]["hora"] == "00:00"
+    assert corpo["previsoes"][23]["hora"] == "23:00"
+    assert all(item["previsto_mw"] > 0 for item in corpo["previsoes"])
+
+
+def test_previsao_padrao_amanha(cliente):
+    # "hoje" falso = 24/11, então sem parâmetro a API deve ler 25/11
+    resposta = cliente.get("/previsao")
+    assert resposta.status_code == 200
+    assert resposta.json()["data"] == "2026-11-25"
+
+
+def test_previsao_404_sem_arquivo(cliente):
+    resposta = cliente.get("/previsao", params={"data": "2026-11-26"})
+    assert resposta.status_code == 404
+
+
+@pytest.mark.parametrize("data", ["amanha", "2026-13-01"])
+def test_previsao_400_data_invalida(cliente, data):
+    resposta = cliente.get("/previsao", params={"data": data})
+    assert resposta.status_code == 400
+    assert "AAAA-MM-DD" in resposta.json()["detail"]
