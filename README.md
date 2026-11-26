@@ -42,12 +42,13 @@ Requires [uv](https://docs.astral.sh/uv/).
 ```bash
 uv sync                                    # create the environment with locked versions
 uv run python -m volt.etl 2026-11-18       # ETL for one day (repeat for the 7 days before the target)
+uv run python -m volt.backfill 2023-11-26 2026-11-25  # load a date range, each year downloaded once; exits 1 if any day failed
 uv run python -m volt.previsao 2026-11-25  # forecast a day (needs the load from 7 days earlier)
 uv run uvicorn volt.api:app                # serve the API on http://localhost:8000
 curl "localhost:8000/previsao?data=2026-11-25"
 ```
 
-Data goes to the `data/` folder by default; set `VOLT_DADOS` to use another folder.
+Data goes to the `data/` folder by default; set `VOLT_DADOS` to use another folder. The backfill also works with `VOLT_DADOS=s3://<bucket>` (to be run in the deploy phase).
 
 Tests: `uv run pytest`. They never touch the network: the download function is injected and replaced by a real ONS excerpt in `tests/fixtures/`.
 
