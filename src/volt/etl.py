@@ -16,7 +16,8 @@ def ler_csv_ons(texto: str, subsistema: str = "SE") -> pd.DataFrame:
     df = bruto.loc[bruto["id_subsistema"] == subsistema, ["din_instante", "val_cargaenergiahomwmed"]]
     df = df.rename(columns={"din_instante": "timestamp", "val_cargaenergiahomwmed": "carga_mw"})
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df["carga_mw"] = df["carga_mw"].astype(float)
+    # valor não numérico vira nulo; validar_dia rejeita só o dia dele
+    df["carga_mw"] = pd.to_numeric(df["carga_mw"], errors="coerce").astype(float)
     return df.sort_values("timestamp").reset_index(drop=True)
 
 
@@ -26,7 +27,11 @@ def validar_dia(df: pd.DataFrame, dia: date) -> pd.DataFrame:
 
     horas = do_dia["timestamp"].dt.hour
     if len(do_dia) != 24 or sorted(horas) != list(range(24)):
-        raise DiaInvalidoError(f"{dia}: esperava as 24 horas, encontrei {len(do_dia)} linhas")
+        faltando = sorted(set(range(24)) - set(horas))
+        repetidas = sorted(horas[horas.duplicated()].unique().tolist())
+        raise DiaInvalidoError(
+            f"{dia}: {len(do_dia)} linhas; horas faltando: {faltando}; horas repetidas: {repetidas}"
+        )
     if do_dia["carga_mw"].isna().any():
         raise DiaInvalidoError(f"{dia}: há carga nula")
     if (do_dia["carga_mw"] <= 0).any():

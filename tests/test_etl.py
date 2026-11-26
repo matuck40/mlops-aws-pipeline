@@ -43,6 +43,23 @@ def test_validar_dia_hora_faltando(df):
         validar_dia(sem_uma_hora, date(2026, 11, 24))
 
 
+def test_validar_dia_hora_repetida(df):
+    # 24 linhas, mas a hora 22 aparece duas vezes e a 23 some
+    df.loc[df.index[-1], "timestamp"] = pd.Timestamp("2026-11-24 22:00")
+    with pytest.raises(DiaInvalidoError, match="faltando: \\[23\\].*repetidas: \\[22\\]"):
+        validar_dia(df, date(2026, 11, 24))
+
+
+def test_valor_estragado_afeta_so_o_proprio_dia():
+    texto = FIXTURE.read_text().replace(
+        "SE;SUDESTE/CENTRO-OESTE;2026-11-17 05:00:00;", "SE;SUDESTE/CENTRO-OESTE;2026-11-17 05:00:00;n/d#", 1
+    )
+    df = ler_csv_ons(texto)
+    assert len(validar_dia(df, date(2026, 11, 24))) == 24
+    with pytest.raises(DiaInvalidoError):
+        validar_dia(df, date(2026, 11, 17))
+
+
 def test_validar_carga_nao_positiva(df):
     df.loc[df.index[-1], "carga_mw"] = 0.0
     with pytest.raises(DiaInvalidoError):
