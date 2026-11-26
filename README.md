@@ -69,19 +69,28 @@ aws s3 ls                # the bucket volt-dados-<account-id> should appear
 
 ```bash
 # 1. empty the data bucket
-aws s3 rm s3://volt-dados-<account-id> --recursive
+ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+aws s3 rm "s3://volt-dados-$ACCOUNT" --recursive
 
-# 2. delete the project stack
+# 2. delete the project stack (asks for confirmation; add --no-prompts to skip)
 sam delete --stack-name volt --region us-east-2
 
-# 3. find the bucket SAM created for deploy packages, and empty it
-aws cloudformation describe-stacks --stack-name aws-sam-cli-managed-default --region us-east-2 \
-  --query "Stacks[0].Outputs[?OutputKey=='SourceBucket'].OutputValue" --output text
-aws s3 rm s3://<that-bucket-name> --recursive
+# 3. find the bucket SAM created for deploy packages
+B=$(aws cloudformation describe-stacks --stack-name aws-sam-cli-managed-default --region us-east-2 \
+  --query "Stacks[0].Outputs[?OutputKey=='SourceBucket'].OutputValue" --output text)
 
-# 4. delete the SAM-managed stack
+# 4. empty it. This bucket is versioned, so `aws s3 rm` is not enough:
+#    delete every object version, then every delete marker.
+aws s3api delete-objects --bucket "$B" --region us-east-2 --delete "$(aws s3api list-object-versions \
+  --bucket "$B" --region us-east-2 --output json --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}')"
+aws s3api delete-objects --bucket "$B" --region us-east-2 --delete "$(aws s3api list-object-versions \
+  --bucket "$B" --region us-east-2 --output json --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}')"
+
+# 5. delete the SAM-managed stack
 aws cloudformation delete-stack --stack-name aws-sam-cli-managed-default --region us-east-2
 ```
+
+Each `delete-objects` call handles up to 1000 entries (repeat if there are more; this project stores only a handful of packages). The second call errors harmlessly if there are no delete markers. The simplest alternative for step 4 is the **Empty** button on the bucket in the S3 console.
 
 ## Workflow
 
