@@ -5,12 +5,15 @@ e pedem ao armazenamento para ler ou gravar. Assim a mesma etapa roda com uma
 pasta local ou, mais tarde, com um bucket do S3.
 """
 
+import io
 import os
 from datetime import date
 from pathlib import Path
 from typing import Protocol
 
+import boto3
 import pandas as pd
+from botocore.exceptions import ClientError
 
 
 def chave_carga(dia: date) -> str:
@@ -59,7 +62,48 @@ class ArmazenamentoLocal:
         return str(caminho)
 
 
+class ArmazenamentoS3:
+    """Guarda os arquivos num bucket do S3 (a chave vira o nome do objeto)."""
+
+    def __init__(self, bucket: str, cliente=None):
+        self.bucket = bucket
+        # criado aqui, nunca na importação do módulo: os testes preparam o ambiente antes
+        self.cliente = cliente or boto3.client("s3")
+
+    def existe(self, chave: str) -> bool:
+        try:
+            self.cliente.head_object(Bucket=self.bucket, Key=chave)
+        except ClientError as erro:
+            if erro.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
+                return False
+            raise  # 403, bucket inexistente etc. não podem virar "não existe"
+        return True
+
+    def ler_parquet(self, chave: str) -> pd.DataFrame:
+        try:
+            resposta = self.cliente.get_object(Bucket=self.bucket, Key=chave)
+        except ClientError as erro:
+            if erro.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                raise FileNotFoundError(f"s3://{self.bucket}/{chave}") from erro
+            raise
+        return pd.read_parquet(io.BytesIO(resposta["Body"].read()))
+
+    def gravar_parquet(self, df: pd.DataFrame, chave: str) -> str:
+        conteudo = io.BytesIO()
+        df.to_parquet(conteudo, index=False)
+        self.cliente.put_object(Bucket=self.bucket, Key=chave, Body=conteudo.getvalue())
+        return f"s3://{self.bucket}/{chave}"
+
+
 def abrir_armazenamento(destino: str | None = None) -> Armazenamento:
-    """Usa o destino dado, senão a variável VOLT_DADOS, senão a pasta "data"."""
+    """Usa o destino dado, senão a variável VOLT_DADOS, senão a pasta "data".
+
+    Um destino "s3://bucket" usa o S3; qualquer outro valor é uma pasta local.
+    """
     destino = destino or os.environ.get("VOLT_DADOS") or "data"  # vazia também cai no padrão
+    if destino.startswith("s3://"):
+        bucket = destino.removeprefix("s3://").strip("/")
+        if not bucket:
+            raise ValueError(f"destino S3 sem nome de bucket: {destino!r}")
+        return ArmazenamentoS3(bucket)
     return ArmazenamentoLocal(Path(destino))
