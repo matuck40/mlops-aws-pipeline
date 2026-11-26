@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -5,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from volt.api import criar_app
+from volt.armazenamento import ArmazenamentoLocal
 from volt.etl import rodar_etl
 from volt.previsao import rodar_previsao
 
@@ -14,11 +17,12 @@ FIXTURE = Path(__file__).parent / "fixtures" / "ons_amostra.csv"
 @pytest.fixture
 def base(tmp_path):
     """Histórico de 17 a 24/11 e a previsão de 25/11 já gravada."""
+    dados = ArmazenamentoLocal(tmp_path)
     texto = FIXTURE.read_text()
     for i in range(8):
-        rodar_etl(date(2026, 11, 17) + timedelta(days=i), tmp_path, fetch=lambda ano: texto)
-    rodar_previsao(date(2026, 11, 25), tmp_path)
-    return tmp_path
+        rodar_etl(date(2026, 11, 17) + timedelta(days=i), dados, fetch=lambda ano: texto)
+    rodar_previsao(date(2026, 11, 25), dados)
+    return dados
 
 
 @pytest.fixture
@@ -61,3 +65,10 @@ def test_previsao_400_data_invalida(cliente, data):
     resposta = cliente.get("/previsao", params={"data": data})
     assert resposta.status_code == 400
     assert "AAAA-MM-DD" in resposta.json()["detail"]
+
+
+def test_api_nao_importa_etl():
+    # processo novo: neste aqui o etl já foi importado pelos outros testes
+    codigo = "import sys, volt.api; print('volt.etl' in sys.modules, 'requests' in sys.modules)"
+    saida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, check=True)
+    assert saida.stdout.strip() == "False False"

@@ -1,17 +1,14 @@
 """API: só lê previsões já gravadas pelo pipeline; nunca roda o modelo."""
 
-import os
 from collections.abc import Callable
 from datetime import date, timedelta
-from pathlib import Path
 
-import pandas as pd
 from fastapi import FastAPI, HTTPException
 
-from volt.previsao import caminho_previsao
+from volt.armazenamento import Armazenamento, abrir_armazenamento, chave_previsao
 
 
-def criar_app(base: Path, hoje: Callable[[], date] = date.today) -> FastAPI:
+def criar_app(dados: Armazenamento, hoje: Callable[[], date] = date.today) -> FastAPI:
     app = FastAPI(title="Volt — previsão de carga horária (SE/CO)")
 
     @app.get("/health")
@@ -29,12 +26,11 @@ def criar_app(base: Path, hoje: Callable[[], date] = date.today) -> FastAPI:
             except ValueError:
                 raise HTTPException(400, f"data inválida: {data!r}; use AAAA-MM-DD") from None
 
-        caminho = caminho_previsao(base, data_alvo)
-        if not caminho.exists():
+        chave = chave_previsao(data_alvo)
+        if not dados.existe(chave):
             raise HTTPException(404, f"previsão de {data_alvo} ainda não gerada")
 
-        # partitioning=None: não criar coluna a partir da pasta data_alvo=...
-        df = pd.read_parquet(caminho, partitioning=None)
+        df = dados.ler_parquet(chave)
         return {
             "data": data_alvo.isoformat(),
             "versao_modelo": str(df["versao_modelo"].iloc[0]),
@@ -47,4 +43,4 @@ def criar_app(base: Path, hoje: Callable[[], date] = date.today) -> FastAPI:
     return app
 
 
-app = criar_app(Path(os.environ.get("VOLT_DATA_DIR", "data")))
+app = criar_app(abrir_armazenamento())
