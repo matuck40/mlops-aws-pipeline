@@ -26,7 +26,9 @@ class Armazenamento(Protocol):
 
     def existe(self, chave: str) -> bool: ...
 
-    def ler_parquet(self, chave: str) -> pd.DataFrame: ...
+    def ler_parquet(self, chave: str) -> pd.DataFrame:
+        """Chave ausente levanta FileNotFoundError, em qualquer implementação."""
+        ...
 
     def gravar_parquet(self, df: pd.DataFrame, chave: str) -> str: ...
 
@@ -38,7 +40,7 @@ class ArmazenamentoLocal:
         self.base = base
 
     def existe(self, chave: str) -> bool:
-        return (self.base / chave).exists()
+        return (self.base / chave).is_file()  # pasta não conta, como no S3
 
     def ler_parquet(self, chave: str) -> pd.DataFrame:
         # partitioning=None: sem isso, o pyarrow 24 cria uma coluna a partir da pasta data=...
@@ -59,5 +61,5 @@ class ArmazenamentoLocal:
 
 def abrir_armazenamento(destino: str | None = None) -> Armazenamento:
     """Usa o destino dado, senão a variável VOLT_DADOS, senão a pasta "data"."""
-    destino = destino or os.environ.get("VOLT_DADOS", "data")
+    destino = destino or os.environ.get("VOLT_DADOS") or "data"  # vazia também cai no padrão
     return ArmazenamentoLocal(Path(destino))

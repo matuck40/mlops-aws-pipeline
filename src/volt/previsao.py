@@ -2,6 +2,7 @@
 
 import argparse
 from datetime import date, timedelta
+
 import pandas as pd
 
 from volt.armazenamento import Armazenamento, abrir_armazenamento, chave_carga, chave_previsao
@@ -12,11 +13,12 @@ SEMANA = timedelta(days=7)
 def naive_sazonal(dados: Armazenamento, data_alvo: date) -> pd.DataFrame:
     """Prevê cada hora do alvo como a carga da mesma hora 7 dias antes."""
     referencia = data_alvo - SEMANA
-    if not dados.existe(chave_carga(referencia)):
+    chave = chave_carga(referencia)
+    if not dados.existe(chave):
         raise FileNotFoundError(
             f"previsão de {data_alvo}: falta a carga de {referencia} (rode o ETL desse dia)"
         )
-    carga = dados.ler_parquet(chave_carga(referencia))
+    carga = dados.ler_parquet(chave)
     return pd.DataFrame(
         {
             "timestamp": carga["timestamp"] + SEMANA,

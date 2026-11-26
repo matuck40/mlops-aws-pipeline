@@ -71,3 +71,18 @@ def test_abrir_armazenamento_usa_variavel(monkeypatch, tmp_path):
 def test_abrir_armazenamento_destino_explicito_vence_variavel(monkeypatch, tmp_path):
     monkeypatch.setenv("VOLT_DADOS", "outra_pasta")
     assert abrir_armazenamento(str(tmp_path)).base == tmp_path
+
+
+def test_local_ler_chave_ausente_da_file_not_found(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        ArmazenamentoLocal(tmp_path).ler_parquet("nao/existe.parquet")
+
+
+def test_local_pasta_nao_conta_como_arquivo(tmp_path):
+    (tmp_path / "carga_horaria").mkdir()
+    assert not ArmazenamentoLocal(tmp_path).existe("carga_horaria")
+
+
+def test_abrir_armazenamento_variavel_vazia_usa_padrao(monkeypatch):
+    monkeypatch.setenv("VOLT_DADOS", "")
+    assert abrir_armazenamento().base == Path("data")
