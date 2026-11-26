@@ -1,0 +1,26 @@
+[project]
+name = "volt"
+version = "0.1.0"
+description = "Previsão horária de carga de energia (ONS, SE/CO) com pipeline de MLOps na AWS"
+readme = "README.md"
+authors = [
+    { name = "Lucca Matuck", email = "72879254+matuck40@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.165.0",
+    "pandas>=3.1.1",
+    "pyarrow>=26.0.1",
+    "requests>=2.34.2",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.24,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+]
