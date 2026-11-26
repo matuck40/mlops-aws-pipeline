@@ -51,6 +51,38 @@ Data goes to the `data/` folder by default; set `VOLT_DADOS` to use another fold
 
 Tests: `uv run pytest`. They never touch the network: the download function is injected and replaced by a real ONS excerpt in `tests/fixtures/`.
 
+## Deploy to AWS
+
+**Not run yet.** The commands below are the plan; slice 2 has only the S3 bucket in `template.yaml` so far. Region: `us-east-2`.
+
+```bash
+aws login                # authenticate first (no credentials are stored in the repo)
+sam validate --lint      # local check of template.yaml
+sam build                # output goes to .aws-sam/ (ignored by Git)
+sam deploy               # settings come from samconfig.toml; confirms the change set before applying
+aws s3 ls                # the bucket volt-dados-<account-id> should appear
+```
+
+## Tear down
+
+**Not run yet.** Order matters: CloudFormation cannot delete a bucket that still has objects.
+
+```bash
+# 1. empty the data bucket
+aws s3 rm s3://volt-dados-<account-id> --recursive
+
+# 2. delete the project stack
+sam delete --stack-name volt --region us-east-2
+
+# 3. find the bucket SAM created for deploy packages, and empty it
+aws cloudformation describe-stacks --stack-name aws-sam-cli-managed-default --region us-east-2 \
+  --query "Stacks[0].Outputs[?OutputKey=='SourceBucket'].OutputValue" --output text
+aws s3 rm s3://<that-bucket-name> --recursive
+
+# 4. delete the SAM-managed stack
+aws cloudformation delete-stack --stack-name aws-sam-cli-managed-default --region us-east-2
+```
+
 ## Workflow
 
 Spec → plan → tasks. Each task starts with a failing test (TDD), lives on its own branch, and merges through a pull request only after CI passes (`main` is protected) and a code review.
