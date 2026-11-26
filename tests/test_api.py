@@ -72,3 +72,10 @@ def test_api_nao_importa_etl():
     codigo = "import sys, volt.api; print('volt.etl' in sys.modules, 'requests' in sys.modules)"
     saida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, check=True)
     assert saida.stdout.strip() == "False False"
+
+
+def test_api_nao_cria_app_na_importacao():
+    # a Lambda importa volt.api; um `app` global abriria um segundo armazenamento sem uso
+    codigo = "import volt.api; print(hasattr(volt.api, 'app'), hasattr(volt.api, 'criar_app_padrao'))"
+    saida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, check=True)
+    assert saida.stdout.strip() == "False True"

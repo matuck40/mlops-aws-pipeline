@@ -9,6 +9,9 @@ from volt.previsao import rodar_previsao
 from volt.tempo import hoje_brasilia
 
 logger = logging.getLogger(__name__)
+# Na Lambda o logger raiz está em WARNING e já tem um handler: só ajustamos o nível
+# deste módulo (sem basicConfig/handler novo, para não duplicar as linhas no CloudWatch).
+logger.setLevel(logging.INFO)
 
 
 def rodar_diario(dados: Armazenamento, hoje: date, fetch=baixar_ano) -> dict:
@@ -40,4 +43,11 @@ def rodar_diario(dados: Armazenamento, hoje: date, fetch=baixar_ano) -> dict:
 
 def handler(event, context) -> dict:
     """Ponto de entrada da Lambda. O armazenamento é criado aqui, não na importação."""
-    return rodar_diario(abrir_armazenamento(), hoje_brasilia(), fetch=baixar_ano)
+    import boto3  # já vem no runtime da Lambda; a versão é registrada para comparar com o pin local
+
+    hoje = hoje_brasilia()
+    logger.info("boto3 %s", boto3.__version__)
+    logger.info("rodando: ontem=%s amanha=%s", hoje - timedelta(days=1), hoje + timedelta(days=1))
+    resultado = rodar_diario(abrir_armazenamento(), hoje, fetch=baixar_ano)
+    logger.info("resultado: %s", resultado)
+    return resultado

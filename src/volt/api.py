@@ -44,4 +44,9 @@ def criar_app(dados: Armazenamento, hoje: Callable[[], date] = hoje_brasilia) ->
     return app
 
 
-app = criar_app(abrir_armazenamento())
+def criar_app_padrao() -> FastAPI:
+    """App com o armazenamento definido por VOLT_DADOS, para uso local.
+
+    Rodar com: uvicorn volt.api:criar_app_padrao --factory
+    """
+    return criar_app(abrir_armazenamento())
