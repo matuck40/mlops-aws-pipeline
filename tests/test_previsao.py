@@ -21,7 +21,7 @@ def base(tmp_path):
 
 def test_naive_copia_semana_anterior(base):
     previsao = naive_sazonal(base, date(2026, 11, 25))
-    referencia = pd.read_parquet(caminho_carga(base, date(2026, 11, 18)))
+    referencia = pd.read_parquet(caminho_carga(base, date(2026, 11, 18)), partitioning=None)
     assert previsao["previsto_mw"].tolist() == referencia["carga_mw"].tolist()
     assert (previsao["versao_modelo"] == "naive_sazonal").all()
 
@@ -42,6 +42,6 @@ def test_rodar_previsao_idempotente(base):
     rodar_previsao(date(2026, 11, 25), base)
     caminho = rodar_previsao(date(2026, 11, 25), base)
     assert caminho == caminho_previsao(base, date(2026, 11, 25))
-    gravado = pd.read_parquet(caminho)
+    gravado = pd.read_parquet(caminho, partitioning=None)
     assert list(gravado.columns) == ["timestamp", "previsto_mw", "versao_modelo"]
     assert len(gravado) == 24

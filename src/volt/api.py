@@ -33,7 +33,8 @@ def criar_app(base: Path, hoje: Callable[[], date] = date.today) -> FastAPI:
         if not caminho.exists():
             raise HTTPException(404, f"previsão de {data_alvo} ainda não gerada")
 
-        df = pd.read_parquet(caminho)
+        # partitioning=None: não criar coluna a partir da pasta data_alvo=...
+        df = pd.read_parquet(caminho, partitioning=None)
         return {
             "data": data_alvo.isoformat(),
             "versao_modelo": str(df["versao_modelo"].iloc[0]),
