@@ -54,7 +54,7 @@ Tests: `uv run pytest`. They never touch the network: the download function is i
 
 ## Deploy to AWS
 
-**Not run yet.** The commands below are the plan; `template.yaml` currently describes the S3 data bucket, the `volt-diario` Lambda with its daily schedule, and the `volt-api` Lambda behind an HTTP API. Region: `us-east-2`.
+**Deployed on 2026-11-26** (stack `volt`). `template.yaml` describes the S3 data bucket, the `volt-diario` Lambda with its daily schedule, and the `volt-api` Lambda behind an HTTP API. Region: `us-east-2`.
 
 ```bash
 aws login                # authenticate first (no credentials are stored in the repo)
@@ -62,6 +62,14 @@ sam validate --lint      # local check of template.yaml
 sam build                # output goes to .aws-sam/ (ignored by Git)
 sam deploy               # settings come from samconfig.toml; confirms the change set before applying
 aws s3 ls                # the bucket volt-dados-<account-id> should appear
+```
+
+Backfill (run once, from your machine). The project's Python can't read `aws login` credentials directly (that needs `botocore[crt]`), so export temporary ones for the command; nothing is written to disk:
+
+```bash
+eval "$(aws configure export-credentials --format env)"
+VOLT_DADOS=s3://volt-dados-<account-id> AWS_DEFAULT_REGION=us-east-2 \
+  uv run python -m volt.backfill 2023-11-26 2026-11-25    # 1096 days, ~7 min
 ```
 
 ### API
