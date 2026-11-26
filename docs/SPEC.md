@@ -37,8 +37,9 @@ A API só lê previsões já salvas.
 ### 0. Alerta de custo
 - Entrada: conta AWS.
 - Saída: orçamento no AWS Budgets com alerta por e-mail.
-- Pronto quando: alerta configurado para gasto real e previsto acima de US$ 1;
-  e-mail de confirmação recebido.
+- Pronto quando: alerta configurado para gasto real e previsto acima de US$ 1,
+  sem descontar créditos; orçamento listado com status OK no AWS Budgets
+  (o Budgets não envia e-mail de confirmação para destinatário direto).
 
 ### 1. ETL diário para S3
 - Entrada: curva de carga horária do ONS, subsistema SE/CO, dia D-1.
@@ -111,8 +112,11 @@ A API só lê previsões já salvas.
 - Atraso de publicação do ONS e horário do agendamento diário.
 - Usar a previsão oficial do ONS como referência extra, se houver em base horária.
 - Onde o MLflow guarda o histórico quando o treino roda na Lambda.
-- Como criar os recursos: console, AWS SAM ou Terraform (infraestrutura como código).
-- Região AWS (us-east-1 é mais barata; sa-east-1 é mais perto).
-- Empacotamento da Lambda (zip ou imagem de container), por causa do tamanho
-  do LightGBM + pandas.
+- Empacotamento da Lambda quando entrar o LightGBM (a camada AWS SDK for pandas
+  pode não bastar; talvez imagem de container).
+
+## Decisões tomadas
+- 2026-11-26 — Recursos criados com AWS SAM (infraestrutura como código), não pelo console.
+- 2026-11-26 — Região us-east-1 (mais barata; os dados do ONS são públicos).
+- 2026-11-26 — Na fatia 2, pandas e pyarrow vêm da camada gerenciada AWS SDK for pandas.
 - Tamanho do período de teste.
