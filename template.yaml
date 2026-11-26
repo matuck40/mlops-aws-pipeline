@@ -2,6 +2,17 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Volt - daily load ETL, forecast and API on AWS (slice 2)
 
+Globals:
+  Function:
+    CodeUri: src/
+    Runtime: python3.12
+    Architectures: [x86_64]
+    Layers:
+      - arn:aws:lambda:us-east-2:336392948345:layer:AWSSDKPandas-Python312:32
+    Environment:
+      Variables:
+        VOLT_DADOS: !Sub s3://${BucketDados}
+
 Resources:
   BucketDados:
     Type: AWS::S3::Bucket
@@ -27,19 +38,11 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: volt-diario
-      CodeUri: src/
       Handler: volt.lambda_diario.handler
-      Runtime: python3.12
-      Architectures: [x86_64]
       MemorySize: 512
       Timeout: 300
-      Layers:
-        - arn:aws:lambda:us-east-2:336392948345:layer:AWSSDKPandas-Python312:32
       LoggingConfig:
         LogGroup: !Ref GrupoLogsDiaria
-      Environment:
-        Variables:
-          VOLT_DADOS: !Sub s3://${BucketDados}
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref BucketDados
@@ -52,6 +55,37 @@ Resources:
             RetryPolicy:
               MaximumRetryAttempts: 2
 
+  GrupoLogsApi:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/volt-api
+      RetentionInDays: 14
+
+  ApiHttp:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefaultRouteSettings:
+        ThrottlingRateLimit: 5
+        ThrottlingBurstLimit: 10
+
+  FuncaoApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: volt-api
+      Handler: volt.lambda_api.handler
+      MemorySize: 512
+      Timeout: 15
+      LoggingConfig:
+        LogGroup: !Ref GrupoLogsApi
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref BucketDados
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiHttp
+
 Outputs:
   BucketDados:
     Description: Name of the S3 bucket that holds the pipeline data
@@ -59,3 +93,6 @@ Outputs:
   FuncaoDiaria:
     Description: Name of the daily Lambda (ETL of yesterday + forecast of tomorrow)
     Value: !Ref FuncaoDiaria
+  UrlApi:
+    Description: Public URL of the forecast API (GET /previsao?data=YYYY-MM-DD, GET /health)
+    Value: !Sub https://${ApiHttp}.execute-api.${AWS::Region}.amazonaws.com/

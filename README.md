@@ -64,6 +64,19 @@ sam deploy               # settings come from samconfig.toml; confirms the chang
 aws s3 ls                # the bucket volt-dados-<account-id> should appear
 ```
 
+### API
+
+The `volt-api` Lambda runs the same FastAPI app behind an API Gateway HTTP API (via [Mangum](https://github.com/Kludex/mangum)); it only has read access to the bucket. The URL is the `UrlApi` stack Output after deploy:
+
+```bash
+URL=$(aws cloudformation describe-stacks --stack-name volt --region us-east-2 \
+  --query "Stacks[0].Outputs[?OutputKey=='UrlApi'].OutputValue" --output text)
+curl "${URL}health"
+curl "${URL}previsao?data=2026-11-25"   # 200 with 24 hourly values; 404 if not generated; 400 if the date is invalid
+```
+
+Throttling is set on the API: 5 requests/s sustained, burst of 10 (excess requests get 429). This also caps the cost of a public URL.
+
 ### Lambda dependencies
 
 `src/requirements.txt` lists only what the AWS SDK for pandas layer does not already ship (pandas, pyarrow, numpy, requests, boto3 and their direct dependencies are left out). Regenerate it after changing dependencies; `tests/test_requirements.py` fails if it drifts:

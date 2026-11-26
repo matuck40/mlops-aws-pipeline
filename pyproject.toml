@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "boto3==1.44.12",
     "fastapi>=0.165.0",
+    "mangum==0.22.0",
     "numpy==2.5.4",
     "pandas==3.1.0",
     "pyarrow==24.0.0",
