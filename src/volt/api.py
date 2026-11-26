@@ -6,9 +6,10 @@ from datetime import date, timedelta
 from fastapi import FastAPI, HTTPException
 
 from volt.armazenamento import Armazenamento, abrir_armazenamento, chave_previsao
+from volt.tempo import hoje_brasilia
 
 
-def criar_app(dados: Armazenamento, hoje: Callable[[], date] = date.today) -> FastAPI:
+def criar_app(dados: Armazenamento, hoje: Callable[[], date] = hoje_brasilia) -> FastAPI:
     app = FastAPI(title="Volt — previsão de carga horária (SE/CO)")
 
     @app.get("/health")

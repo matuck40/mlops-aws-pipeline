@@ -10,12 +10,16 @@ from volt.armazenamento import Armazenamento, abrir_armazenamento, chave_carga, 
 SEMANA = timedelta(days=7)
 
 
+class HistoricoIncompletoError(Exception):
+    """Falta a carga do dia de referência para gerar a previsão."""
+
+
 def naive_sazonal(dados: Armazenamento, data_alvo: date) -> pd.DataFrame:
     """Prevê cada hora do alvo como a carga da mesma hora 7 dias antes."""
     referencia = data_alvo - SEMANA
     chave = chave_carga(referencia)
     if not dados.existe(chave):
-        raise FileNotFoundError(
+        raise HistoricoIncompletoError(
             f"previsão de {data_alvo}: falta a carga de {referencia} (rode o ETL desse dia)"
         )
     carga = dados.ler_parquet(chave)

@@ -6,7 +6,7 @@ import pytest
 
 from volt.armazenamento import ArmazenamentoLocal, chave_carga, chave_previsao
 from volt.etl import rodar_etl
-from volt.previsao import main, naive_sazonal, rodar_previsao
+from volt.previsao import HistoricoIncompletoError, main, naive_sazonal, rodar_previsao
 
 FIXTURE = Path(__file__).parent / "fixtures" / "ons_amostra.csv"
 
@@ -36,7 +36,7 @@ def test_naive_timestamps_do_alvo(base):
 
 def test_naive_sem_referencia(base):
     assert len(naive_sazonal(base, date(2026, 11, 30))) == 24  # referência 23/11 existe
-    with pytest.raises(FileNotFoundError, match="2026-11-28"):
+    with pytest.raises(HistoricoIncompletoError, match="2026-11-28"):
         naive_sazonal(base, date(2026, 12, 5))  # referência 28/11 não existe
 
 
