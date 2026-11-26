@@ -1,3 +1,4 @@
+import logging
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -77,3 +78,19 @@ def test_handler_usa_volt_dados_e_relogio(dados, bucket, monkeypatch):
 
     assert resultado["previsao"].endswith(chave_previsao(date(2026, 11, 26)))
     assert dados.existe(chave_carga(HOJE - timedelta(days=1)))
+
+
+def test_handler_registra_versao_do_boto3_datas_e_resultado(dados, bucket, monkeypatch, caplog):
+    import boto3
+
+    monkeypatch.setenv("VOLT_DADOS", f"s3://{bucket}")
+    monkeypatch.setattr(lambda_diario, "hoje_brasilia", lambda: HOJE)
+    monkeypatch.setattr(lambda_diario, "baixar_ano", fetch_ok)
+
+    with caplog.at_level(logging.INFO, logger="volt.lambda_diario"):
+        lambda_diario.handler({}, None)
+
+    texto = caplog.text
+    assert boto3.__version__ in texto
+    assert "2026-11-24" in texto and "2026-11-26" in texto  # ontem e amanhã
+    assert "carga" in texto and "previsao" in texto  # o resultado final
