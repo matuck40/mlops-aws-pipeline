@@ -117,6 +117,6 @@ A API só lê previsões já salvas.
 
 ## Decisões tomadas
 - 2026-11-26 — Recursos criados com AWS SAM (infraestrutura como código), não pelo console.
-- 2026-11-26 — Região us-east-1 (mais barata; os dados do ONS são públicos).
+- 2026-11-26 — Região us-east-2: é a região principal da conta (o modelo novo de conta nega serviços regionais fora dela); mesmo preço da us-east-1 e os dados do ONS são públicos.
 - 2026-11-26 — Na fatia 2, pandas e pyarrow vêm da camada gerenciada AWS SDK for pandas.
 - Tamanho do período de teste.
