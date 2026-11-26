@@ -13,7 +13,6 @@ dependencies = [
     "pandas==3.1.0",
     "pyarrow==24.0.0",
     "requests==2.34.2",
-    "uvicorn>=0.54.0",
 ]
 
 [build-system]
@@ -24,4 +23,5 @@ build-backend = "uv_build"
 dev = [
     "httpx>=0.28.1",
     "pytest>=9.2.0",
+    "uvicorn>=0.54.0",
 ]
