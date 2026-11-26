@@ -2,13 +2,14 @@
 
 import argparse
 import io
-import os
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 
 import pandas as pd
 import requests
+
+from volt.arquivos import gravar_parquet_atomico
 
 URL_ONS = "https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/curva-carga-ho/CURVA_CARGA_{ano}.csv"
 
@@ -70,15 +71,7 @@ def rodar_etl(dia: date, base: Path, fetch: Callable[[int], str] = baixar_ano) -
         raise
     do_dia = validar_dia(ler_csv_ons(texto), dia)
 
-    caminho = caminho_carga(base, dia)
-    caminho.parent.mkdir(parents=True, exist_ok=True)
-    temporario = caminho.with_suffix(".tmp")
-    try:
-        do_dia.to_parquet(temporario, index=False)
-        os.replace(temporario, caminho)  # escrita atômica: nunca fica arquivo pela metade
-    finally:
-        temporario.unlink(missing_ok=True)  # se falhou no meio, não deixa lixo
-    return caminho
+    return gravar_parquet_atomico(do_dia, caminho_carga(base, dia))
 
 
 def main(argv: list[str] | None = None) -> None:

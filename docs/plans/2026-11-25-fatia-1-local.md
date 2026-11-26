@@ -44,7 +44,7 @@
 
 ---
 
-### Tarefa 1: Esqueleto do projeto + CI
+### Task 1: Esqueleto do projeto + CI
 
 **Branch:** `chore/esqueleto-ci`
 
@@ -61,7 +61,7 @@
 - [ ] **Passo 8:** commit, push da branch, abrir PR com `gh pr create`. Esperado: check do CI verde no PR.
 - [ ] **Passo 9:** proteger a `main` (exigir o check do CI antes do merge) com `gh api` → merge.
 
-### Tarefa 2: ETL — ler e validar o CSV do ONS
+### Task 2: ETL — ler e validar o CSV do ONS
 
 **Branch:** `feat/etl-parse`
 
@@ -83,7 +83,7 @@
 
 - [ ] Escrever os testes → rodar e ver falhar → implementar → rodar e ver passar → commit → PR → CI verde → revisão → merge.
 
-### Tarefa 3: ETL — buscar, gravar e rodar um dia
+### Task 3: ETL — buscar, gravar e rodar um dia
 
 **Branch:** `feat/etl-run`
 
@@ -103,7 +103,7 @@
 
 - [ ] Ciclo TDD → commit → PR → CI → revisão → merge.
 
-### Tarefa 4: Previsão com o naive sazonal
+### Task 4: Previsão com o naive sazonal
 
 **Branch:** `feat/previsao-naive`
 
@@ -125,7 +125,7 @@
 
 - [ ] Ciclo TDD → commit → PR → CI → revisão → merge.
 
-### Tarefa 5: API que só lê previsões
+### Task 5: API que só lê previsões
 
 **Branch:** `feat/api`
 
@@ -147,7 +147,7 @@
 
 - [ ] Ciclo TDD → commit → PR → CI → revisão → merge.
 
-### Tarefa 6: Ponta a ponta de verdade + README
+### Task 6: Ponta a ponta de verdade + README
 
 **Branch:** `docs/fatia-1`
 
