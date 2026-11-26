@@ -139,3 +139,43 @@ def test_abrir_armazenamento_s3_pela_variavel(s3_falso, monkeypatch):
 def test_abrir_armazenamento_s3_sem_bucket(destino):
     with pytest.raises(ValueError, match="bucket"):
         abrir_armazenamento(destino)
+
+
+# --- existe com respostas "cruas" da AWS (cliente falso, sem depender do moto) ---
+
+
+class ClienteFalso:
+    """Cliente S3 que só devolve os erros combinados; head_bucket None = bucket existe."""
+
+    def __init__(self, erro_objeto, erro_bucket=None):
+        self.erro_objeto = erro_objeto
+        self.erro_bucket = erro_bucket
+
+    def head_object(self, **kwargs):
+        raise self.erro_objeto
+
+    def head_bucket(self, **kwargs):
+        if self.erro_bucket:
+            raise self.erro_bucket
+
+
+def _erro(codigo, operacao):
+    return ClientError({"Error": {"Code": codigo}}, operacao)
+
+
+def test_s3_existe_404_com_bucket_inexistente_sobe_erro():
+    # na AWS real, HeadObject num bucket que não existe devolve 404 sem corpo
+    cliente = ClienteFalso(_erro("404", "HeadObject"), _erro("404", "HeadBucket"))
+    with pytest.raises(ClientError):
+        ArmazenamentoS3("bucket", cliente).existe("a.parquet")
+
+
+def test_s3_existe_404_com_bucket_existente_e_false():
+    cliente = ClienteFalso(_erro("404", "HeadObject"))
+    assert ArmazenamentoS3("bucket", cliente).existe("a.parquet") is False
+
+
+def test_s3_existe_403_sobe_erro():
+    cliente = ClienteFalso(_erro("403", "HeadObject"))
+    with pytest.raises(ClientError):
+        ArmazenamentoS3("bucket", cliente).existe("a.parquet")

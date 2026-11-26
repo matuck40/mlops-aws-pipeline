@@ -74,9 +74,12 @@ class ArmazenamentoS3:
         try:
             self.cliente.head_object(Bucket=self.bucket, Key=chave)
         except ClientError as erro:
-            if erro.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
-                return False
-            raise  # 403, bucket inexistente etc. não podem virar "não existe"
+            if erro.response["Error"]["Code"] not in ("404", "NoSuchKey", "NotFound"):
+                raise  # 403 etc. não podem virar "não existe"
+            # Na AWS real, 404 sem corpo também vale para bucket inexistente (ex.: nome
+            # errado em VOLT_DADOS). Confirma o bucket; se ele não existir, o erro sobe.
+            self.cliente.head_bucket(Bucket=self.bucket)
+            return False
         return True
 
     def ler_parquet(self, chave: str) -> pd.DataFrame:
