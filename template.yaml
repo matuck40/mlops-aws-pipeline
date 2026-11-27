@@ -50,7 +50,7 @@ Resources:
         Agendamento:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: cron(0 10 * * ? *)
+            ScheduleExpression: cron(0 21 * * ? *)
             ScheduleExpressionTimezone: America/Sao_Paulo
             RetryPolicy:
               MaximumRetryAttempts: 2
